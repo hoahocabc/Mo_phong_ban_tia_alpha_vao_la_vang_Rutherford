@@ -1,0 +1,162 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden; 
+    background-color: #000;
+    touch-action: none; /* Khóa thao tác cuộn trang của trình duyệt mặc định */
+}
+
+#app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* SIDEBAR MẶC ĐỊNH (PC) */
+#sidebar {
+    width: 320px;
+    background-color: #1e1e1e;
+    color: #fff;
+    padding: 20px;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.8);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    text-align: center;
+    border-bottom: 1px solid #444;
+    padding-bottom: 15px;
+    margin-bottom: 5px;
+}
+
+.sidebar-header h2 { font-size: 18px; color: #ffd700; margin-bottom: 5px; }
+.sidebar-header h3 { font-size: 20px; color: #00d2ff; font-weight: 900; }
+.desc { font-size: 13px; color: #aaa; text-align: center; }
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #2a2a2a;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+label { font-size: 14px; font-weight: 600; }
+input[type=range] { width: 100%; cursor: pointer; }
+
+button {
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.btn-play { background-color: #5cb85c; }
+.btn-play:hover { background-color: #4cae4c; }
+.btn-pause { background-color: #d9534f; }
+.btn-pause:hover { background-color: #c9302c; }
+.btn-power-off { background-color: #007acc; } 
+.btn-power-off:hover { background-color: #005f9e; }
+.btn-power-on { background-color: #e67e22; } 
+.btn-power-on:hover { background-color: #d35400; }
+
+.instructions {
+    margin-top: auto;
+    background: #222;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #ccc;
+    line-height: 1.6;
+}
+.instructions ul { padding-left: 20px; margin-top: 5px; }
+
+#canvas-container {
+    flex-grow: 1;
+    background-color: #000000; 
+    position: relative;
+    width: 100%;
+}
+
+/* Nút và Overlay hiển thị trên Mobile */
+#mobile-menu-btn {
+    display: none;
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 100;
+    background-color: rgba(30, 30, 30, 0.8);
+    border: 1px solid #555;
+    padding: 10px 15px;
+    font-size: 14px;
+    border-radius: 6px;
+}
+
+#overlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0,0,0,0.6);
+    z-index: 900;
+}
+
+.mobile-only { display: none; }
+
+/* CHẾ ĐỘ ĐIỆN THOẠI / TABLET */
+@media (max-width: 768px) {
+    #mobile-menu-btn { display: block; }
+    .mobile-only { display: block; }
+    
+    #close-sidebar-btn {
+        background-color: transparent;
+        border: 1px solid #777;
+        margin-bottom: 10px;
+        color: #fff;
+    }
+
+    #sidebar {
+        position: absolute;
+        top: 0;
+        left: -320px; /* Ẩn sang trái */
+        height: 100vh;
+        max-width: 85vw; /* Không chiếm full màn hình */
+        transition: left 0.3s ease-in-out;
+    }
+
+    #sidebar.open {
+        left: 0; /* Vuốt ra */
+    }
+
+    #overlay.active {
+        display: block;
+    }
+}
+
+/* TOOLTIP HIỂN THỊ TÊN ĐỐI TƯỢNG */
+#tooltip {
+    display: none;
+    position: fixed; 
+    background: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ffd700;
+    font-size: 14px;
+    font-weight: bold;
+    pointer-events: none; 
+    z-index: 2000;
+}
