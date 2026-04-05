@@ -12,7 +12,7 @@ let particleAccumulator = 0;
 // Biến lưu tọa độ và trạng thái chạm
 let globalMouseX = 0;
 let globalMouseY = 0;
-let isTouchMode = false; // Phân biệt chuột và ngón tay
+let isTouchMode = false;
 
 // DOM Elements
 let sliderRate, btnToggle, btnPower, tooltipEl;
@@ -29,7 +29,7 @@ function setup() {
     tooltipEl = document.getElementById('tooltip');
 
     tooltipEl.style.textAlign = "center";
-    tooltipEl.style.lineHeight = "1.4";
+    tooltipEl.style.lineHeight = "1.5";
 
     btnToggle.mousePressed(toggleSimulation);
     btnPower.mousePressed(togglePower);
@@ -44,11 +44,9 @@ function setup() {
     closeSidebarBtn.addEventListener('click', closeMenu);
     overlay.addEventListener('click', closeMenu);
 
-    // Khóa tương tác 3D khi chạm vào Sidebar (Sử dụng pointer cho cả chuột và cảm ứng)
     sidebarEl.addEventListener('pointerenter', () => { isMouseOverSidebar = true; });
     sidebarEl.addEventListener('pointerleave', () => { isMouseOverSidebar = false; });
 
-    // Quét tọa độ chuột / ngón tay liên tục
     window.addEventListener('mousemove', updateInputPos);
     window.addEventListener('touchmove', updateInputPos, {passive: true});
     window.addEventListener('touchstart', updateInputPos, {passive: true});
@@ -56,12 +54,11 @@ function setup() {
     camera(450, -300, 500, 0, 0, 0, 0, 1, 0); 
 }
 
-// Cập nhật tọa độ từ thiết bị tương tác
 function updateInputPos(e) {
     if (e.touches && e.touches.length > 0) {
         globalMouseX = e.touches[0].clientX;
         globalMouseY = e.touches[0].clientY;
-        isTouchMode = true; // Kích hoạt chế độ chạm
+        isTouchMode = true; 
     } else {
         globalMouseX = e.clientX;
         globalMouseY = e.clientY;
@@ -69,7 +66,6 @@ function updateInputPos(e) {
     }
 }
 
-// Mở / Đóng Menu trên Mobile
 function openMenu() {
     sidebarEl.classList.add('open');
     overlay.classList.add('active');
@@ -79,10 +75,17 @@ function closeMenu() {
     overlay.classList.remove('active');
 }
 
-function draw() {
-    // Chỉ cho phép tương tác 3D khi Menu Mobile đang đóng và không trỏ vào Sidebar
+// Hàm chặn trình duyệt cuộn trang để ưu tiên Zoom 3D
+function mouseWheel(event) {
     if (!isMouseOverSidebar && !sidebarEl.classList.contains('open')) {
-        orbitControl(2, 2, 0.5); 
+        return false; // Chặn mặc định trình duyệt
+    }
+}
+
+function draw() {
+    if (!isMouseOverSidebar && !sidebarEl.classList.contains('open')) {
+        // Tăng thông số thứ 3 (zoom sensitivity) lên 1 để zoom mượt và dễ dàng hơn
+        orbitControl(2, 2, 1); 
     }
 
     // ==========================================
@@ -90,7 +93,6 @@ function draw() {
     // ==========================================
     let targetName = "";
     
-    // Quét điểm khi nhấn chuột hoặc chạm tay
     if ((mouseIsPressed || touches.length > 0) && !isMouseOverSidebar && !sidebarEl.classList.contains('open')) {
         background(0); 
         noLights(); 
@@ -102,28 +104,29 @@ function draw() {
         let col = get(mouseX, mouseY);
         
         if (col[0] > 200) {
-            targetName = "Lá vàng mỏng<br><span style='font-size:12px; font-weight:normal; color:#ccc;'>(Gold Foil)</span>";
+            targetName = "Lá Vàng<br><span style='font-size:12px; font-weight:normal; color:#94a3b8;'>(Gold Foil)</span>";
         } else if (col[1] > 200) {
-            targetName = "Nguồn phát tia Alpha<br><span style='font-size:12px; font-weight:normal; color:#ccc;'>(Alpha Particle Source)</span>";
+            targetName = "Nguồn Alpha<br><span style='font-size:12px; font-weight:normal; color:#94a3b8;'>(Alpha Source)</span>";
         } else if (col[2] > 200) {
-            targetName = "Màn huỳnh quang ZnS<br><span style='font-size:12px; font-weight:normal; color:#ccc;'>(Fluorescent Screen)</span>";
+            targetName = "Màn Huỳnh Quang<br><span style='font-size:12px; font-weight:normal; color:#94a3b8;'>(ZnS Screen)</span>";
         }
     }
 
     if (targetName !== "") {
         tooltipEl.innerHTML = targetName;
         tooltipEl.style.display = 'block';
+        tooltipEl.style.opacity = '1';
         
-        // Tối ưu UX trên điện thoại: Đẩy Tooltip lên cao để không bị ngón tay che
         if (isTouchMode) {
-            tooltipEl.style.left = (globalMouseX - tooltipEl.offsetWidth / 2) + 'px'; // Căn giữa ngón tay
-            tooltipEl.style.top = (globalMouseY - 80) + 'px'; // Đẩy lên 80px so với điểm chạm
+            tooltipEl.style.left = (globalMouseX - tooltipEl.offsetWidth / 2) + 'px'; 
+            tooltipEl.style.top = (globalMouseY - 90) + 'px'; 
         } else {
             tooltipEl.style.left = (globalMouseX + 15) + 'px';
             tooltipEl.style.top = (globalMouseY + 15) + 'px';
         }
     } else {
-        tooltipEl.style.display = 'none';
+        tooltipEl.style.opacity = '0';
+        setTimeout(() => { if(tooltipEl.style.opacity === '0') tooltipEl.style.display = 'none'; }, 200);
     }
 
     // ==========================================
@@ -131,10 +134,10 @@ function draw() {
     // ==========================================
     background(0); 
 
-    ambientLight(130, 130, 130); 
-    directionalLight(190, 190, 190, 1, 1, -1); 
-    directionalLight(110, 110, 120, -1, -0.5, 1); 
-    directionalLight(90, 90, 90, 0, -1, 1); 
+    ambientLight(150, 150, 150); 
+    directionalLight(255, 255, 255, 1, 1, -1); 
+    directionalLight(200, 200, 200, -1, -1, 1); 
+    directionalLight(120, 120, 120, 0, 1, 1); 
 
     drawScreen(false);
     drawFoil(false);
@@ -181,20 +184,21 @@ function draw() {
         shininess(0);
         
         let ratio = f.life / 255; 
-        let haloSize = 1.5 + ratio * 2.0; 
-        fill(50, 200, 255, f.life * 0.5); 
-        emissiveMaterial(0, 150, 255, f.life * 0.5); 
+        
+        let haloSize = 2.0 + ratio * 3.0; 
+        fill(20, 255, 80, f.life * 0.4); 
+        emissiveMaterial(20, 255, 80, f.life * 0.4); 
         sphere(haloSize); 
 
-        let coreSize = 1 + ratio * 1.5; 
-        fill(200, 240, 255, f.life); 
-        emissiveMaterial(150, 220, 255, f.life); 
+        let coreSize = 1.0 + ratio * 1.5; 
+        fill(200, 255, 200, f.life); 
+        emissiveMaterial(150, 255, 150, f.life); 
         sphere(coreSize); 
         
         pop();
 
         if (isPlaying) {
-            f.life -= 35; 
+            f.life -= 30; 
             if (f.life <= 0) flashes.splice(i, 1); 
         }
     }
@@ -208,11 +212,11 @@ function drawFoil(isPicking) {
     if (isPicking) {
         fill(255, 0, 0); 
     } else {
-        fill(255, 220, 0); 
-        specularMaterial(140); 
-        shininess(50); 
+        fill(255, 215, 0); 
+        specularMaterial(255); 
+        shininess(100); 
     }
-    box(40, 40, 0.5); 
+    box(45, 45, 0.2); 
     pop();
 }
 
@@ -222,25 +226,21 @@ function drawSource(isPicking) {
     noStroke();
     if (isPicking) {
         fill(0, 255, 0); 
-        box(30, 30, 60);
+        box(40, 40, 60);
         translate(0, 0, -31);
-        cylinder(4, 2);
+        cylinder(5, 2);
     } else {
-        fill(130); 
-        specularMaterial(70); 
+        fill(120, 120, 130); 
+        specularMaterial(50); 
         shininess(20); 
-        box(30, 30, 60);
+        box(40, 40, 60);
         
         translate(0, 0, -31);
-        fill(0); 
+        fill(10); 
         specularMaterial(0);
-        cylinder(4, 2);
+        cylinder(5, 2);
     }
     pop();
-}
-
-function drawFluorescentScreen() {
-    drawScreen(false);
 }
 
 function drawScreen(isPicking) {
@@ -249,9 +249,9 @@ function drawScreen(isPicking) {
     if (isPicking) {
         fill(0, 0, 255); 
     } else {
-        fill(50, 180, 50, 100); 
-        specularMaterial(100);  
-        shininess(30);         
+        fill(40, 160, 100, 100); 
+        specularMaterial(255);  
+        shininess(100);         
     }
 
     beginShape(TRIANGLE_STRIP);
@@ -263,10 +263,10 @@ function drawScreen(isPicking) {
         let nz = cos(theta);
         
         if (!isPicking) normal(nx, 0, nz);
-        vertex(x, -50, z); 
+        vertex(x, -55, z); 
         
         if (!isPicking) normal(nx, 0, nz);
-        vertex(x, 50, z);  
+        vertex(x, 55, z);  
     }
     endShape();
     pop();
@@ -304,7 +304,7 @@ function windowResized() {
 class AlphaParticle {
     constructor(x, y, z) {
         this.pos = createVector(x, y, z);
-        this.vel = createVector(0, 0, -8); 
+        this.vel = createVector(0, 0, -9); 
         this.hasScattered = false;
     }
 
@@ -319,8 +319,8 @@ class AlphaParticle {
         
         specularMaterial(0); 
         shininess(0);        
-        fill(255, 50, 50); 
-        emissiveMaterial(255, 50, 50); 
+        fill(255, 0, 0); 
+        emissiveMaterial(255, 0, 0); 
         
         sphere(2.5);
         pop();
@@ -342,7 +342,7 @@ class AlphaParticle {
     }
 
     checkScreenCollision() {
-        if (this.pos.y < -50 || this.pos.y > 50) return false;
+        if (this.pos.y < -55 || this.pos.y > 55) return false;
 
         let r_xz = sqrt(this.pos.x * this.pos.x + this.pos.z * this.pos.z);
         if (r_xz >= screenRadius) {

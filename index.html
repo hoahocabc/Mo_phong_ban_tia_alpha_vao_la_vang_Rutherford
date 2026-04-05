@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mô phỏng Thí nghiệm Rutherford 3D</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Nút mở Menu trên Mobile -->
-    <button id="mobile-menu-btn">☰ Điều khiển</button>
+    <button id="mobile-menu-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        Điều khiển
+    </button>
     
     <!-- Lớp phủ làm tối màn hình khi mở Menu -->
     <div id="overlay"></div>
@@ -17,13 +21,13 @@
     <div id="app-container">
         <!-- Sidebar điều khiển bên trái -->
         <div id="sidebar">
-            <button id="close-sidebar-btn" class="mobile-only">✖ Đóng menu</button>
+            <button id="close-sidebar-btn" class="mobile-only">✕ Đóng</button>
 
             <div class="sidebar-header">
                 <h2>THÍ NGHIỆM RUTHERFORD</h2>
                 <h3>HÓA HỌC ABC</h3>
             </div>
-            <p class="desc">Mô phỏng tán xạ tia Alpha qua lá vàng mỏng.</p>
+            <p class="desc">Mô phỏng tương tác tán xạ của hạt Alpha qua màng nguyên tử Vàng.</p>
             
             <div class="control-group">
                 <button id="btn-power" class="btn-power-off">Bật nguồn phát</button>
@@ -36,11 +40,11 @@
             </div>
 
             <div class="instructions">
-                <strong>Hướng dẫn:</strong>
+                <div class="inst-title">Hướng dẫn tương tác:</div>
                 <ul>
-                    <li><b>Xoay 3D:</b> Chuột trái hoặc Vuốt 1 ngón.</li>
-                    <li><b>Xem tên:</b> Bấm giữ chuột / ngón tay vào đối tượng.</li>
-                    <li><b>Thu / Phóng:</b> Con lăn chuột hoặc Zoom 2 ngón.</li>
+                    <li><b>Xoay 3D:</b> Chuột trái / Vuốt 1 ngón.</li>
+                    <li><b>Thông tin:</b> Bấm giữ vào đối tượng.</li>
+                    <li><b>Thu / Phóng:</b> Con lăn chuột / Zoom 2 ngón.</li>
                 </ul>
             </div>
         </div>
