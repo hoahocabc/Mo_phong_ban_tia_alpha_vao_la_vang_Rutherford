@@ -3,60 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mô phỏng Thí nghiệm Rutherford 3D</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <title>Mô phỏng Thí nghiệm Rutherford Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Nút mở Menu trên Mobile -->
-    <button id="mobile-menu-btn">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
-        Điều khiển
-    </button>
-    
-    <!-- Lớp phủ làm tối màn hình khi mở Menu -->
-    <div id="overlay"></div>
+    <div id="app-wrapper">
+        <button id="mobile-toggle" aria-label="Toggle Menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+        </button>
 
-    <div id="app-container">
-        <!-- Sidebar điều khiển bên trái -->
-        <div id="sidebar">
-            <button id="close-sidebar-btn" class="mobile-only">✕ Đóng</button>
-
-            <div class="sidebar-header">
-                <h2>THÍ NGHIỆM RUTHERFORD</h2>
-                <h3>HÓA HỌC ABC</h3>
-            </div>
-            <p class="desc">Mô phỏng tương tác tán xạ của hạt Alpha qua màng nguyên tử Vàng.</p>
+        <aside id="sidebar">
+            <button id="close-sidebar" class="mobile-only">✕ Đóng</button>
             
-            <div class="control-group">
-                <button id="btn-power" class="btn-power-off">Bật nguồn phát</button>
-                <button id="btn-toggle" class="btn-pause">Tạm dừng</button>
+            <div class="header">
+                <h1>MÔ PHỎNG THÍ NGHIỆM RUTHERFORD</h1>
+                <p>HÓA HỌC ABC</p>
             </div>
 
-            <div class="control-group">
-                <label>Tốc độ bắn hạt Alpha:</label>
-                <input type="range" id="slider-rate" min="0" max="100" value="40">
+            <div class="stats-container">
+                <div class="stat-box">
+                    <span class="stat-label">Tổng hạt</span>
+                    <span class="stat-value" id="stat-total">0</span>
+                    <span class="stat-percent" style="visibility: hidden;">0%</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Đi thẳng</span>
+                    <span class="stat-value text-blue" id="stat-straight">0</span>
+                    <span class="stat-percent text-blue" id="percent-straight">0.0%</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">Bị lệch</span>
+                    <span class="stat-value text-red" id="stat-scattered">0</span>
+                    <span class="stat-percent text-red" id="percent-scattered">0.0%</span>
+                </div>
             </div>
 
-            <div class="instructions">
-                <div class="inst-title">Hướng dẫn tương tác:</div>
-                <ul>
-                    <li><b>Xoay 3D:</b> Chuột trái / Vuốt 1 ngón.</li>
-                    <li><b>Thông tin:</b> Bấm giữ vào đối tượng.</li>
-                    <li><b>Thu / Phóng:</b> Con lăn chuột / Zoom 2 ngón.</li>
-                </ul>
-            </div>
-        </div>
+            <div class="controls">
+                <div class="control-row">
+                    <button id="btn-power" class="btn primary">Bật Nguồn</button>
+                    <button id="btn-pause" class="btn secondary">Tạm dừng</button>
+                    <button id="btn-reset" class="btn secondary">Làm mới</button>
+                </div>
 
-        <!-- Vùng chứa Canvas 3D bên phải -->
-        <div id="canvas-container">
-            <!-- p5.js sẽ chèn canvas vào đây -->
-        </div>
+                <div class="slider-group">
+                    <label for="slider-rate">Tốc độ bắn: <span id="rate-val">TB</span></label>
+                    <input type="range" id="slider-rate" min="1" max="10" value="5">
+                </div>
+
+                <div class="slider-group">
+                    <label for="slider-thickness">Độ dày lá vàng: <span id="thickness-val">Chuẩn</span></label>
+                    <input type="range" id="slider-thickness" min="1" max="10" value="5">
+                </div>
+            </div>
+            
+            <div class="hints">
+                🖱️ Xoay 3D: Chuột trái / Vuốt <br>
+                🔍 Zoom: Lăn chuột / Chụm ngón <br>
+                🎯 Click vật thể: Xem tên
+            </div>
+        </aside>
+
+        <main id="canvas-container"></main>
     </div>
 
-    <!-- Nhãn hiển thị tên đối tượng -->
-    <div id="tooltip"></div>
+    <!-- Nhãn Tooltip hiển thị tên vật thể -->
+    <div id="tooltip" class="tooltip"></div>
 
     <script src="sketch.js"></script>
 </body>

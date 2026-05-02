@@ -1,244 +1,237 @@
-// Các biến toàn cục
-let isPlaying = true;
-let isPowerOn = false; 
-let isMouseOverSidebar = false; 
+const SCREEN_RADIUS = 180;
+const SOURCE_Z = 250;
+const FOIL_Z = 0;
+
+let isPowerOn = false;
+let isPaused = false; 
 let particles = [];
-let flashes = []; 
-let screenRadius = 150; 
-let sourceZ = 220; 
+let flashes = [];
 
-let particleAccumulator = 0;
+let stats = { total: 0, straight: 0, scattered: 0 };
+let uiPanel, btnPower, btnPause, btnReset, rateSlider, thicknessSlider;
+let statTotal, statStraight, statScattered, rateVal, thicknessVal;
+let percentStraight, percentScattered;
+let mobileToggle, tooltipEl, closeSidebarBtn;
+let canvasContainer;
 
-// Biến lưu tọa độ và trạng thái chạm
-let globalMouseX = 0;
-let globalMouseY = 0;
-let isTouchMode = false;
+// --- WEB AUDIO API ---
+let audioCtx;
+let lastShootTime = 0;
+let lastHitTime = 0;
 
-// DOM Elements
-let sliderRate, btnToggle, btnPower, tooltipEl;
-let sidebarEl, mobileMenuBtn, overlay, closeSidebarBtn;
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+function playShootSound() {
+    if (!audioCtx) return;
+    let osc = audioCtx.createOscillator();
+    let gainNode = audioCtx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.015, audioCtx.currentTime); 
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.1);
+}
+
+function playHitSound() {
+    if (!audioCtx) return;
+    let osc = audioCtx.createOscillator();
+    let gainNode = audioCtx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
+    
+    gainNode.gain.setValueAtTime(0.02, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.05);
+}
 
 function setup() {
-    let container = document.getElementById('canvas-container');
-    let canvas = createCanvas(container.clientWidth, container.clientHeight, WEBGL);
+    canvasContainer = document.getElementById('canvas-container');
+    let canvas = createCanvas(canvasContainer.clientWidth, canvasContainer.clientHeight, WEBGL);
     canvas.parent('canvas-container');
 
-    sliderRate = select('#slider-rate');
-    btnToggle = select('#btn-toggle');
-    btnPower = select('#btn-power');
+    uiPanel = document.getElementById('sidebar');
+    btnPower = document.getElementById('btn-power');
+    btnPause = document.getElementById('btn-pause');
+    btnReset = document.getElementById('btn-reset');
+    rateSlider = document.getElementById('slider-rate');
+    thicknessSlider = document.getElementById('slider-thickness');
+    
+    statTotal = document.getElementById('stat-total');
+    statStraight = document.getElementById('stat-straight');
+    statScattered = document.getElementById('stat-scattered');
+    
+    percentStraight = document.getElementById('percent-straight');
+    percentScattered = document.getElementById('percent-scattered');
+
+    rateVal = document.getElementById('rate-val');
+    thicknessVal = document.getElementById('thickness-val');
+    mobileToggle = document.getElementById('mobile-toggle');
+    closeSidebarBtn = document.getElementById('close-sidebar');
     tooltipEl = document.getElementById('tooltip');
 
-    tooltipEl.style.textAlign = "center";
-    tooltipEl.style.lineHeight = "1.5";
-
-    btnToggle.mousePressed(toggleSimulation);
-    btnPower.mousePressed(togglePower);
+    btnPower.addEventListener('click', togglePower);
+    btnPause.addEventListener('click', togglePause);
+    btnReset.addEventListener('click', resetSimulation);
     
-    // Quản lý Mobile Menu
-    sidebarEl = document.getElementById('sidebar');
-    mobileMenuBtn = document.getElementById('mobile-menu-btn');
-    overlay = document.getElementById('overlay');
-    closeSidebarBtn = document.getElementById('close-sidebar-btn');
+    rateSlider.addEventListener('input', () => rateVal.innerText = rateSlider.value);
+    thicknessSlider.addEventListener('input', () => thicknessVal.innerText = thicknessSlider.value);
 
-    mobileMenuBtn.addEventListener('click', openMenu);
-    closeSidebarBtn.addEventListener('click', closeMenu);
-    overlay.addEventListener('click', closeMenu);
+    mobileToggle.addEventListener('click', () => uiPanel.classList.add('open'));
+    closeSidebarBtn.addEventListener('click', () => uiPanel.classList.remove('open'));
 
-    sidebarEl.addEventListener('pointerenter', () => { isMouseOverSidebar = true; });
-    sidebarEl.addEventListener('pointerleave', () => { isMouseOverSidebar = false; });
-
-    window.addEventListener('mousemove', updateInputPos);
-    window.addEventListener('touchmove', updateInputPos, {passive: true});
-    window.addEventListener('touchstart', updateInputPos, {passive: true});
-
-    camera(450, -300, 500, 0, 0, 0, 0, 1, 0); 
-}
-
-function updateInputPos(e) {
-    if (e.touches && e.touches.length > 0) {
-        globalMouseX = e.touches[0].clientX;
-        globalMouseY = e.touches[0].clientY;
-        isTouchMode = true; 
-    } else {
-        globalMouseX = e.clientX;
-        globalMouseY = e.clientY;
-        isTouchMode = false;
-    }
-}
-
-function openMenu() {
-    sidebarEl.classList.add('open');
-    overlay.classList.add('active');
-}
-function closeMenu() {
-    sidebarEl.classList.remove('open');
-    overlay.classList.remove('active');
-}
-
-// Hàm chặn trình duyệt cuộn trang để ưu tiên Zoom 3D
-function mouseWheel(event) {
-    if (!isMouseOverSidebar && !sidebarEl.classList.contains('open')) {
-        return false; // Chặn mặc định trình duyệt
-    }
+    camera(550, -350, 600, 0, 0, 0, 0, 1, 0);
 }
 
 function draw() {
-    if (!isMouseOverSidebar && !sidebarEl.classList.contains('open')) {
-        // Tăng thông số thứ 3 (zoom sensitivity) lên 1 để zoom mượt và dễ dàng hơn
-        orbitControl(2, 2, 1); 
+    let isMouseInCanvas = mouseX >= 0 && mouseX <= width && mouseY >= 0 && mouseY <= height;
+    
+    if (isMouseInCanvas) {
+        orbitControl(2, 2, 0.5);
     }
 
-    // ==========================================
-    // BƯỚC 1: QUÉT CHUỘT / CHẠM BẰNG GPU
-    // ==========================================
     let targetName = "";
-    
-    if ((mouseIsPressed || touches.length > 0) && !isMouseOverSidebar && !sidebarEl.classList.contains('open')) {
-        background(0); 
+    if (mouseIsPressed && isMouseInCanvas) {
+        background(0);
         noLights(); 
         
         drawFoil(true);   
         drawSource(true); 
         drawScreen(true); 
-        
+
         let col = get(mouseX, mouseY);
         
-        if (col[0] > 200) {
-            targetName = "Lá Vàng<br><span style='font-size:12px; font-weight:normal; color:#94a3b8;'>(Gold Foil)</span>";
-        } else if (col[1] > 200) {
-            targetName = "Nguồn Alpha<br><span style='font-size:12px; font-weight:normal; color:#94a3b8;'>(Alpha Source)</span>";
-        } else if (col[2] > 200) {
-            targetName = "Màn Huỳnh Quang<br><span style='font-size:12px; font-weight:normal; color:#94a3b8;'>(ZnS Screen)</span>";
+        if (col[0] > 200 && col[1] < 50 && col[2] < 50) {
+            targetName = "Lá Vàng (Gold Foil)";
+        } else if (col[1] > 200 && col[0] < 50 && col[2] < 50) {
+            targetName = "Hộp Nguồn Phát Alpha";
+        } else if (col[2] > 200 && col[0] < 50 && col[1] < 50) {
+            targetName = "Màn Huỳnh Quang (ZnS)";
         }
     }
 
     if (targetName !== "") {
-        tooltipEl.innerHTML = targetName;
+        tooltipEl.innerText = targetName;
         tooltipEl.style.display = 'block';
-        tooltipEl.style.opacity = '1';
         
-        if (isTouchMode) {
-            tooltipEl.style.left = (globalMouseX - tooltipEl.offsetWidth / 2) + 'px'; 
-            tooltipEl.style.top = (globalMouseY - 90) + 'px'; 
-        } else {
-            tooltipEl.style.left = (globalMouseX + 15) + 'px';
-            tooltipEl.style.top = (globalMouseY + 15) + 'px';
-        }
-    } else {
-        tooltipEl.style.opacity = '0';
-        setTimeout(() => { if(tooltipEl.style.opacity === '0') tooltipEl.style.display = 'none'; }, 200);
+        let canvasRect = canvasContainer.getBoundingClientRect();
+        tooltipEl.style.left = (mouseX + canvasRect.left) + 'px';
+        tooltipEl.style.top = (mouseY + canvasRect.top) + 'px';
+    } else if (!mouseIsPressed) {
+        tooltipEl.style.display = 'none';
     }
 
-    // ==========================================
-    // BƯỚC 2: VẼ HIỂN THỊ THỰC TẾ
-    // ==========================================
-    background(0); 
+    background(10, 12, 16);
 
-    ambientLight(150, 150, 150); 
-    directionalLight(255, 255, 255, 1, 1, -1); 
-    directionalLight(200, 200, 200, -1, -1, 1); 
-    directionalLight(120, 120, 120, 0, 1, 1); 
+    ambientLight(60);
+    directionalLight(255, 255, 255, 1, 1, -1);
+    directionalLight(150, 200, 255, -1, -1, 1);
+    pointLight(255, 200, 100, 0, 0, 50);
 
     drawScreen(false);
     drawFoil(false);
     drawSource(false);
 
-    if (isPlaying && isPowerOn) {
-        let val = parseInt(sliderRate.value());
-        if (val > 0) {
-            let step = val / 30; 
-            particleAccumulator += step;
+    if (isPowerOn && !isPaused) {
+        let delayFrames = floor(map(rateSlider.value, 1, 10, 60, 5));
+        
+        if (frameCount % delayFrames === 0) {
+            particles.push(new AlphaParticle(0, 0, SOURCE_Z - 35));
+            stats.total++;
+            updateStatsUI();
             
-            let emitCount = Math.floor(particleAccumulator);
-            particleAccumulator -= emitCount;
-            
-            for (let j = 0; j < emitCount; j++) {
-                let zOffset = sourceZ - 30 - (j * (8 / emitCount));
-                particles.push(new AlphaParticle(0, 0, zOffset));
+            if (millis() - lastShootTime > 80) {
+                playShootSound();
+                lastShootTime = millis();
             }
         }
     }
 
     for (let i = particles.length - 1; i >= 0; i--) {
         let p = particles[i];
-        if (isPlaying) p.update();
-        p.checkScattering();
+        
+        if (!isPaused) {
+            p.update();
+        }
+        p.show();
 
-        if (p.checkScreenCollision()) {
-            flashes.push({ pos: createVector(p.pos.x, p.pos.y, p.pos.z), life: 255 });
-            particles.splice(i, 1); 
-        } else if (p.isOutOfBounds()) {
-            particles.splice(i, 1); 
-        } else {
-            p.show(); 
+        if (!isPaused) {
+            if (p.checkScreenCollision()) {
+                flashes.push({ pos: p.pos.copy(), life: 255 });
+                if (p.hasScattered) stats.scattered++;
+                else stats.straight++;
+                updateStatsUI();
+                
+                if (millis() - lastHitTime > 50) {
+                    playHitSound();
+                    lastHitTime = millis();
+                }
+                
+                particles.splice(i, 1);
+            } else if (p.isOutOfBounds()) {
+                particles.splice(i, 1);
+            }
         }
     }
 
-    for (let i = flashes.length - 1; i >= 0; i--) {
-        let f = flashes[i];
-        push();
-        translate(f.pos.x, f.pos.y, f.pos.z);
-        noStroke();
-        
-        specularMaterial(0); 
-        shininess(0);
-        
-        let ratio = f.life / 255; 
-        
-        let haloSize = 2.0 + ratio * 3.0; 
-        fill(20, 255, 80, f.life * 0.4); 
-        emissiveMaterial(20, 255, 80, f.life * 0.4); 
-        sphere(haloSize); 
-
-        let coreSize = 1.0 + ratio * 1.5; 
-        fill(200, 255, 200, f.life); 
-        emissiveMaterial(150, 255, 150, f.life); 
-        sphere(coreSize); 
-        
-        pop();
-
-        if (isPlaying) {
-            f.life -= 30; 
-            if (f.life <= 0) flashes.splice(i, 1); 
-        }
-    }
+    drawFlashes();
 }
-
-// --- CÁC HÀM VẼ KHỐI ---
 
 function drawFoil(isPicking) {
     push();
+    translate(0, 0, FOIL_Z);
     noStroke();
+    
+    let visualThickness = parseInt(thicknessSlider.value) * 0.6; 
+
     if (isPicking) {
         fill(255, 0, 0); 
     } else {
-        fill(255, 215, 0); 
-        specularMaterial(255); 
-        shininess(100); 
+        fill(255, 215, 0);
+        specularMaterial(255, 215, 0);
+        shininess(100);
     }
-    box(45, 45, 0.2); 
+    box(60, 60, visualThickness);
     pop();
 }
 
 function drawSource(isPicking) {
     push();
-    translate(0, 0, sourceZ);
+    translate(0, 0, SOURCE_Z);
     noStroke();
     if (isPicking) {
         fill(0, 255, 0); 
-        box(40, 40, 60);
-        translate(0, 0, -31);
-        cylinder(5, 2);
+        box(50, 50, 70);
+        translate(0, 0, -35);
+        cylinder(8, 10);
     } else {
-        fill(120, 120, 130); 
-        specularMaterial(50); 
-        shininess(20); 
-        box(40, 40, 60);
+        fill(80, 85, 90);
+        specularMaterial(50);
+        shininess(20);
+        box(50, 50, 70);
         
-        translate(0, 0, -31);
-        fill(10); 
-        specularMaterial(0);
-        cylinder(5, 2);
+        translate(0, 0, -35);
+        fill(20);
+        cylinder(8, 10);
     }
     pop();
 }
@@ -249,117 +242,174 @@ function drawScreen(isPicking) {
     if (isPicking) {
         fill(0, 0, 255); 
     } else {
-        fill(40, 160, 100, 100); 
+        fill(40, 200, 150, 60); 
         specularMaterial(255);  
-        shininess(100);         
+        shininess(50);         
     }
 
     beginShape(TRIANGLE_STRIP);
-    for (let theta = 0.3; theta <= TWO_PI - 0.3; theta += 0.1) {
-        let x = sin(theta) * screenRadius;
-        let z = cos(theta) * screenRadius;
-        
+    let startAngle = 0.15;
+    let endAngle = TWO_PI - 0.15;
+    
+    for (let theta = startAngle; theta <= endAngle; theta += 0.05) {
+        let x = sin(theta) * SCREEN_RADIUS;
+        let z = cos(theta) * SCREEN_RADIUS;
         let nx = sin(theta);
         let nz = cos(theta);
         
-        if (!isPicking) normal(nx, 0, nz);
-        vertex(x, -55, z); 
-        
-        if (!isPicking) normal(nx, 0, nz);
-        vertex(x, 55, z);  
+        if (!isPicking) normal(-nx, 0, -nz);
+        vertex(x, -70, z); 
+        if (!isPicking) normal(-nx, 0, -nz);
+        vertex(x, 70, z);  
     }
     endShape();
     pop();
 }
 
-// --- CÁC HÀM ĐIỀU KHIỂN ---
-
-function togglePower() {
-    isPowerOn = !isPowerOn;
-    if (isPowerOn) {
-        btnPower.html('Tắt nguồn phát');
-        btnPower.removeClass('btn-power-off').addClass('btn-power-on');
-    } else {
-        btnPower.html('Bật nguồn phát');
-        btnPower.removeClass('btn-power-on').addClass('btn-power-off');
+function drawFlashes() {
+    for (let i = flashes.length - 1; i >= 0; i--) {
+        let f = flashes[i];
+        push();
+        translate(f.pos.x, f.pos.y, f.pos.z);
+        noStroke();
+        let alpha = f.life;
+        fill(50, 255, 100, alpha * 0.3);
+        emissiveMaterial(50, 255, 100);
+        sphere(3.5);
+        fill(200, 255, 200, alpha);
+        sphere(1.5);
+        pop();
+        
+        if (!isPaused) {
+            f.life -= 40; 
+            if (f.life <= 0) flashes.splice(i, 1);
+        }
     }
-}
-
-function toggleSimulation() {
-    isPlaying = !isPlaying;
-    if (isPlaying) {
-        btnToggle.html('Tạm dừng');
-        btnToggle.removeClass('btn-play').addClass('btn-pause');
-    } else {
-        btnToggle.html('Phát tiếp');
-        btnToggle.removeClass('btn-pause').addClass('btn-play');
-    }
-}
-
-function windowResized() {
-    let container = document.getElementById('canvas-container');
-    resizeCanvas(container.clientWidth, container.clientHeight);
 }
 
 class AlphaParticle {
     constructor(x, y, z) {
         this.pos = createVector(x, y, z);
-        this.vel = createVector(0, 0, -9); 
+        this.vel = createVector(0, 0, -8); 
         this.hasScattered = false;
     }
 
     update() {
         this.pos.add(this.vel);
+
+        if (this.pos.z < 5 && this.pos.z > -5 && !this.hasScattered) {
+            this.calculateScattering();
+        }
+    }
+
+    calculateScattering() {
+        this.hasScattered = true;
+        let thickness = parseInt(thicknessSlider.value);
+        let rand = random(100);
+        
+        if (rand < thickness * 1.2) {
+            this.vel.z *= -random(0.2, 1.0); 
+            this.vel.x = random(-6, 6);
+            this.vel.y = random(-6, 6);
+        } 
+        else if (rand < thickness * 4) {
+            this.vel.x = random(-4, 4);
+            this.vel.y = random(-4, 4);
+            this.vel.z = -sqrt(Math.abs(64 - this.vel.x**2 - this.vel.y**2));
+        }
+        else if (rand < thickness * 8) {
+            this.vel.x = random(-1.5, 1.5);
+            this.vel.y = random(-1.5, 1.5);
+            this.vel.z = -sqrt(Math.abs(64 - this.vel.x**2 - this.vel.y**2));
+        }
+
+        this.vel.setMag(8);
+
+        if (abs(this.vel.x) > 0.5 || abs(this.vel.y) > 0.5 || this.vel.z > 0) {
+            this.isDeflected = true;
+        } else {
+            this.isDeflected = false;
+            this.hasScattered = false; 
+        }
     }
 
     show() {
         push();
         translate(this.pos.x, this.pos.y, this.pos.z);
         noStroke();
-        
-        specularMaterial(0); 
-        shininess(0);        
-        fill(255, 0, 0); 
-        emissiveMaterial(255, 0, 0); 
-        
+        fill(255, 100, 100);
+        emissiveMaterial(255, 50, 50);
         sphere(2.5);
         pop();
     }
 
-    checkScattering() {
-        if (this.pos.z <= 4 && this.pos.z >= -4 && !this.hasScattered) {
-            this.hasScattered = true;
-            let r = random(1);
-            if (r < 0.02) {
-                this.vel.z *= -random(0.3, 0.8);
-                this.vel.x = random(-6, 6);
-                this.vel.y = random(-6, 6);
-            } else if (r < 0.12) {
-                this.vel.x = random(-3, 3);
-                this.vel.y = random(-3, 3);
-            }
-        }
-    }
-
     checkScreenCollision() {
-        if (this.pos.y < -55 || this.pos.y > 55) return false;
-
+        if (this.pos.y < -70 || this.pos.y > 70) return false;
         let r_xz = sqrt(this.pos.x * this.pos.x + this.pos.z * this.pos.z);
-        if (r_xz >= screenRadius) {
+        
+        if (r_xz >= SCREEN_RADIUS) {
             let theta = atan2(this.pos.x, this.pos.z);
             if (theta < 0) theta += TWO_PI; 
             
-            if (theta > 0.3 && theta < TWO_PI - 0.3) {
-                let exactSurface = screenRadius - 1; 
-                this.pos.x = (this.pos.x / r_xz) * exactSurface;
-                this.pos.z = (this.pos.z / r_xz) * exactSurface;
+            if (theta > 0.15 && theta < TWO_PI - 0.15) {
+                this.pos.x = (this.pos.x / r_xz) * SCREEN_RADIUS;
+                this.pos.z = (this.pos.z / r_xz) * SCREEN_RADIUS;
                 return true; 
             }
         }
         return false;
     }
 
-    isOutOfBounds() {
-        return (this.pos.mag() > 400);
+    isOutOfBounds() { return (this.pos.mag() > 500); }
+}
+
+function togglePower() {
+    initAudio(); 
+    
+    isPowerOn = !isPowerOn;
+    if (isPowerOn) {
+        btnPower.innerText = 'Tắt Nguồn';
+        btnPower.classList.add('active');
+    } else {
+        btnPower.innerText = 'Bật Nguồn';
+        btnPower.classList.remove('active');
     }
+}
+
+function togglePause() {
+    isPaused = !isPaused;
+    if (isPaused) {
+        btnPause.innerText = 'Tiếp tục';
+        btnPause.style.background = 'rgba(239, 68, 68, 0.2)'; 
+        btnPause.style.border = '1px solid rgba(239, 68, 68, 0.5)';
+    } else {
+        btnPause.innerText = 'Tạm dừng';
+        btnPause.style.background = 'rgba(255, 255, 255, 0.05)';
+        btnPause.style.border = '1px solid rgba(255,255,255,0.1)';
+    }
+}
+
+function resetSimulation() {
+    stats = { total: 0, straight: 0, scattered: 0 };
+    particles = [];
+    flashes = [];
+    updateStatsUI();
+}
+
+function updateStatsUI() {
+    statTotal.innerText = stats.total;
+    statStraight.innerText = stats.straight;
+    statScattered.innerText = stats.scattered;
+
+    if (stats.total > 0) {
+        percentStraight.innerText = ((stats.straight / stats.total) * 100).toFixed(1) + '%';
+        percentScattered.innerText = ((stats.scattered / stats.total) * 100).toFixed(1) + '%';
+    } else {
+        percentStraight.innerText = '0.0%';
+        percentScattered.innerText = '0.0%';
+    }
+}
+
+function windowResized() {
+    resizeCanvas(canvasContainer.clientWidth, canvasContainer.clientHeight);
 }
